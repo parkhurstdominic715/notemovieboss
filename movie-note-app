@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Movie Note App</title>
+    <style>
+        body { font-family: 'Arial', sans-serif; margin: 0; padding: 0; background-color: #121212; color: #e0e0e0; }
+        header { background: #1e1e1e; color: #ffca28; padding: 15px 20px; text-align: center; border-bottom: 2px solid #ffca28; }
+        .container { display: grid; grid-template-columns: 1fr; gap: 20px; max-width: 800px; margin: 20px auto; padding: 20px; background: #1a1a1a; border-radius: 8px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5); }
+        .section { padding: 15px; border: 1px solid #333; border-radius: 5px; background: #252525; }
+        .section input, .section textarea { width: 100%; padding: 10px; margin: 5px 0; border: 1px solid #444; border-radius: 5px; background: #333; color: #e0e0e0; }
+        .button { background: #ffca28; color: #121212; border: none; padding: 10px 15px; cursor: pointer; border-radius: 5px; transition: background 0.3s; }
+        .button:hover { background: #ffc107; }
+        .note-list, .wishlist-list, .want-list, .release-list { margin-top: 20px; }
+        .note-list div, .wishlist-list div, .want-list div, .release-list div { margin-bottom: 15px; background: #2a2a2a; padding: 10px; border-radius: 5px; }
+        .cookie-warning { position: fixed; bottom: 0; left: 0; right: 0; background: #1e1e1e; color: #e0e0e0; padding: 15px; text-align: center; display: none; }
+        @media (min-width: 600px) { .container { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 600px) { .container { padding: 10px; } }
+    </style>
+</head>
+<body>
+    <header><h1>Movie Note App</h1></header>
+    <div class="container">
+        <div class="section">
+            <h2>Home</h2>
+            <p>Welcome to the Movie Note App! Keep track of your favorite movies, wishes, and upcoming releases.</p>
+            <button class="button" onclick="loadFromLocalStorage()">Load Saved Data</button>
+        </div>
+        <div class="section">
+            <h2>Search Movies</h2>
+            <input type="text" id="searchInput" oninput="searchMovies()" placeholder="Search movies...">
+        </div>
+        <div class="section">
+            <h2>Add a Movie Note</h2>
+            <input type="text" id="movieTitle" placeholder="Movie Title">
+            <textarea id="movieNotes" rows="4" placeholder="Write your notes about the movie..."></textarea>
+            <label for="movieRating">Rating:</label>
+            <select id="movieRating">
+                <option value="0">Select Rating</option>
+                <option value="1">⭐</option>
+                <option value="2">⭐⭐</option>
+                <option value="3">⭐⭐⭐</option>
+                <option value="4">⭐⭐⭐⭐</option>
+                <option value="5">⭐⭐⭐⭐⭐</option>
+            </select>
+            <button class="button" onclick="addMovieNote()">Save Note</button>
+            <button class="button" onclick="iterateMovies()">Count Movies</button>
+        </div>
+        <div class="note-list" id="noteList"><h2>Your Movie Notes</h2></div>
+        <div class="section">
+            <h2>Add to Wishlist</h2>
+            <input type="text" id="wishlistMovie" placeholder="Movie Title">
+            <label for="wishlistRating">Rating:</label>
+            <select id="wishlistRating">
+                <option value="0">Select Rating</option>
+                <option value="1">⭐</option>
+                <option value="2">⭐⭐</option>
+                <option value="3">⭐⭐⭐</option>
+                <option value="4">⭐⭐⭐⭐</option>
+                <option value="5">⭐⭐⭐⭐⭐</option>
+            </select>
+            <button class="button" onclick="addToWishlist()">Add to Wishlist</button>
+        </div>
+        <div class="wishlist-list" id="wishlistList"><h2>Your Wishlist</h2></div>
+        <div class="section">
+            <h2>Add to Want List</h2>
+            <input type="text" id="wantListMovie" placeholder="Movie Title">
+            <label for="wantListRating">Rating:</label>
+            <select id="wantListRating">
+                <option value="0">Select Rating</option>
+                <option value="1">⭐</option>
+                <option value="2">⭐⭐</option>
+                <option value="3">⭐⭐⭐</option>
+                <option value="4">⭐⭐⭐⭐</option>
+                <option value="5">⭐⭐⭐⭐⭐</option>
+            </select>
+            <button class="button" onclick="addToWantList()">Add to Want List</button>
+        </div>
+        <div class="want-list" id="wantList"><h2>Your Want List</h2></div>
+        <div class="section">
+            <h2>Movie Release Dates</h2>
+            <input type="date" id="releaseDate">
+            <input type="text" id="releaseMovieTitle" placeholder="Movie Title">
+            <input type="time" id="notificationTime" placeholder="Notification Time">
+            <button class="button" onclick="addReleaseDate()">Add Release Date</button>
+        </div>
+        <div class="release-list" id="releaseList"><h2>Upcoming Releases</h2></div>
+        <div class="section">
+            <h2>Settings</h2>
+            <p>Manage your app settings here.</p>
+            <button class="button" onclick="showPrivacyPolicy()">Privacy Policy</button>
+            <button class="button" onclick="showCookieWarning()">Cookie Policy</button>
+        </div>
+    </div>
+    <div class="cookie-warning" id="cookieWarning">
+        <p>This website uses cookies to enhance your experience. <button class="button" onclick="acceptCookies()">Accept</button></p>
+    </div>
+
+    <script>
+        let currentEditElement = null;
+
+        function loadFromLocalStorage() {
+            const notes = JSON.parse(localStorage.getItem('movieNotes')) || [];
+            const wishlist = JSON.parse(localStorage.getItem('wishlist')) || [];
+            const wantList = JSON.parse(localStorage.getItem('wantList')) || [];
+
+            // Load movie notes
+            notes.forEach(note => {
+                const noteList = document.getElementById('noteList');
+                const noteDiv = document.createElement('div');
+                noteDiv.innerHTML = `<h3>${note.title} (${note.rating} stars)</h3><p>${note.notes}</p><button class="button" onclick="editNote(this)">Edit</button><button class="button" onclick="deleteNote(this)">Delete</button>`;
+                noteList.appendChild(noteDiv);
+            });
+
+            // Load wishlist
+            wishlist.forEach(item => {
+                const wishlistList = document.getElementById('wishlistList');
+                const wishlistDiv = document.createElement('div');
+                wishlistDiv.innerHTML = `<h3>${item.title} (${item.rating} stars)</h3><button class="button" onclick="deleteWishlistItem(this)">Delete</button>`;
+                wishlistList.appendChild(wishlistDiv);
+            });
+
+            // Load want list
+            wantList.forEach(item => {
+                const wantListElement = document.getElementById('wantList');
+                const wantDiv = document.createElement('div');
+                wantDiv.innerHTML = `<h3>${item.title} (${item.rating} stars)</h3><button class="button" onclick="deleteWantListItem(this)">Delete</button>`;
+                wantListElement.appendChild(wantDiv);
+            });
+
+            alert("Data loaded from local storage!");
+        }
+
+        function addMovieNote() {
+            const title = document.getElementById('movieTitle').value;
+            const notes = document.getElementById('movieNotes').value;
+            const rating = document.getElementById('movieRating').value;
+
+            if (title && notes && rating > 0) {
+                if (currentEditElement) {
+                    // Update existing note
+                    currentEditElement.innerHTML = `<h3>${title} (${rating} stars)</h3><p>${notes}</p><button class="button" onclick="editNote(this)">Edit</button><button class="button" onclick="deleteNote(this)">Delete</button>`;
+                    currentEditElement = null;
+                    alert("Note updated successfully!");
+                } else {
+                    // Add new note
+                    const noteList = document.getElementById('noteList');
+                    const noteDiv = document.createElement('div');
+                    noteDiv.innerHTML = `<h3>${title} (${rating} stars)</h3><p>${notes}</p><button class="button" onclick="editNote(this)">Edit</button><button class="button" onclick="deleteNote(this)">Delete</button>`;
+                    noteList.appendChild(noteDiv);
+                    saveToLocalStorage(title, notes, rating);
+                    alert("Note added successfully!");
+                }
+                clearMovieInputs();
+            } else {
+                if (!title) {
+                    alert("Please enter a movie title.");
+                } else if (!notes) {
+                    alert("Please write your notes about the movie.");
+                } else {
+                    alert("Please select a rating.");
+                }
+            }
+        }
+
+        function saveToLocalStorage(title, notes, rating) {
+            const existingNotes = JSON.parse(localStorage.getItem('movieNotes')) || [];
+            existingNotes.push({ title, notes, rating });
+            localStorage.setItem('movieNotes', JSON.stringify(existingNotes));
+        }
+
+        function editNote(button) {
+            currentEditElement = button.parentElement;
+            const title = currentEditElement.querySelector('h3').innerText.split(' (')[0];
+            const notes = currentEditElement.querySelector('p').innerText;
+            const rating = currentEditElement.querySelector('h3').innerText.match(/\((\d) stars\)/)[1];
+            document.getElementById('movieTitle').value = title;
+            document.getElementById('movieNotes').value = notes;
+            document.getElementById('movieRating').value = rating;
+        }
+
+        function clearMovieInputs() {
+            document.getElementById('movieTitle').value = '';
+            document.getElementById('movieNotes').value = '';
+            document.getElementById('movieRating').value = '0';
+        }
+
+        function deleteNote(button) {
+            const noteDiv = button.parentElement;
+            noteDiv.remove();
+            alert("Note deleted successfully!");
+        }
+
+        function addToWishlist() {
+            const title = document.getElementById('wishlistMovie').value;
+            const rating = document.getElementById('wishlistRating').value;
+
+            if (title && rating > 0) {
+                const wishlistList = document.getElementById('wishlistList');
+                const wishlistDiv = document.createElement('div');
+                wishlistDiv.innerHTML = `<h3>${title} (${rating} stars)</h3><button class="button" onclick="deleteWishlistItem(this)">Delete</button>`;
+                wishlistList.appendChild(wishlistDiv);
+                saveWishlistToLocalStorage(title, rating);
+                clearWishlistInputs();
+                alert("Movie added to wishlist successfully!");
+            }
+        }
+
+        function saveWishlistToLocalStorage(title, rating) {
+            const existingWishlist = JSON.parse(localStorage.getItem('wishlist')) || [];
+            existingWishlist.push({ title, rating });
+            localStorage.setItem('wishlist', JSON.stringify(existingWishlist));
+        }
+
+        function clearWishlistInputs() {
+            document.getElementById('wishlistMovie').value = '';
+            document.getElementById('wishlistRating').value = '0';
+        }
+
+        function deleteWishlistItem(button) {
+            const wishlistDiv = button.parentElement;
+            wishlistDiv.remove();
+            alert("Wishlist item deleted successfully!");
+        }
+
+        function addToWantList() {
+            const title = document.getElementById('wantListMovie').value;
+            const rating = document.getElementById('wantListRating').value;
+
+            if (title && rating > 0) {
+                const wantList = document.getElementById('wantList');
+                const wantDiv = document.createElement('div');
+                wantDiv.innerHTML = `<h3>${title} (${rating} stars)</h3><button class="button" onclick="deleteWantListItem(this)">Delete</button>`;
+                wantList.appendChild(wantDiv);
+                saveWantListToLocalStorage(title, rating);
+                clearWantListInputs();
+                alert("Movie added to want list successfully!");
+            }
+        }
+
+        function saveWantListToLocalStorage(title, rating) {
+            const existingWantList = JSON.parse(localStorage.getItem('wantList')) || [];
+            existingWantList.push({ title, rating });
+            localStorage.setItem('wantList', JSON.stringify(existingWantList));
+        }
+
+        function clearWantListInputs() {
+            document.getElementById('wantListMovie').value = '';
+            document.getElementById('wantListRating').value = '0';
+        }
+
+        function deleteWantListItem(button) {
+            const wantDiv = button.parentElement;
+            wantDiv.remove();
+            alert("Want list item deleted successfully!");
+        }
+
+        function addReleaseDate() {
+            const date = document.getElementById('releaseDate').value;
+            const title = document.getElementById('releaseMovieTitle').value;
+            const time = document.getElementById('notificationTime').value;
+
+            if (date && title && time) {
+                const releaseList = document.getElementById('releaseList');
+                const releaseDiv = document.createElement('div');
+                releaseDiv.innerHTML = `<strong>${title}</strong> - <em>${new Date(date).toLocaleDateString()} at ${time}</em> <button class="button" onclick="deleteReleaseDate(this)">Delete</button>`;
+                releaseList.appendChild(releaseDiv);
+                clearReleaseInputs();
+                setUpNotification(date, title, time);
+                alert("Release date added successfully!");
+            }
+        }
+
+        function clearReleaseInputs() {
+            document.getElementById('releaseDate').value = '';
+            document.getElementById('releaseMovieTitle').value = '';
+            document.getElementById('notificationTime').value = '';
+        }
+
+        function deleteReleaseDate(button) {
+            const releaseDiv = button.parentElement;
+            releaseDiv.remove();
+            alert("Release date deleted successfully!");
+        }
+
+        function setUpNotification(date, title, time) {
+            const releaseDateTime = new Date(`${date}T${time}`);
+            const now = new Date();
+            const timeUntilRelease = releaseDateTime - now;
+
+            if (timeUntilRelease > 0) {
+                setTimeout(() => {
+                    alert(`Reminder: "${title}" is being released today!`);
+                }, timeUntilRelease);
+            }
+        }
+
+        function iterateMovies() {
+            const noteList = document.getElementById('noteList').children;
+            const wishlistList = document.getElementById('wishlistList').children;
+            const wantList = document.getElementById('wantList').children;
+            let totalMovies = 0;
+
+            totalMovies += noteList.length;
+            totalMovies += wishlistList.length;
+            totalMovies += wantList.length;
+
+            alert(`Total Movies: ${totalMovies}`);
+            console.log(`Total Movies: ${totalMovies}`);
+        }
+
+        function searchMovies() {
+            const searchInput = document.getElementById('searchInput').value.toLowerCase();
+            const sections = ['noteList', 'wishlistList', 'wantList', 'releaseList'];
+            sections.forEach(sectionId => {
+                const section = document.getElementById(sectionId);
+                Array.from(section.children).forEach(item => {
+                    const title = item.innerText.toLowerCase();
+                    item.style.display = title.includes(searchInput) ? 'block' : 'none';
+                });
+            });
+        }
+
+        function showPrivacyPolicy() {
+            alert("Privacy Policy: We do not share your data with third parties.");
+        }
+
+        function showCookieWarning() {
+            document.getElementById('cookieWarning').style.display = 'block';
+        }
+
+        function acceptCookies() {
+            document.getElementById('cookieWarning').style.display = 'none';
+            alert("Cookies accepted!");
+        }
+    </script>
+</body>
+</html>
