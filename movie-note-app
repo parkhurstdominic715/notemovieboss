@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Movie Note App</title>
+    <title>This Movie Diary</title>
     <style>
         body { font-family: 'Arial', sans-serif; margin: 0; padding: 0; background-color: #121212; color: #e0e0e0; }
         header { background: #1e1e1e; color: #ffca28; padding: 15px 20px; text-align: center; border-bottom: 2px solid #ffca28; }
@@ -20,7 +20,7 @@
     </style>
 </head>
 <body>
-    <header><h1>Movie Note App</h1></header>
+    <header><h1>This Movie Diary io </h1></header>
     <div class="container">
         <div class="section">
             <h2>Home</h2>
